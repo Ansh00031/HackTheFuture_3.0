@@ -16,6 +16,19 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+# Ensure Windows terminal doesn't crash on utf-8 / cp1252 emoji output
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Ensure project root directory is always in sys.path (supports execution from any working directory)
 _AGENT_ROOT = Path(__file__).resolve().parent
 if str(_AGENT_ROOT) not in sys.path:
@@ -162,6 +175,7 @@ from core.ui import (
     print_sessions_history,
     print_status_summary,
     print_web_threats_summary,
+    print_accuracy_benchmark_chart,
 )
 
 app = typer.Typer(
@@ -1377,13 +1391,28 @@ def interactive_menu_cmd() -> None:
             install_shortcut_cmd()
         elif choice == "16" or choice.lower() in ["clear-history", "reset-history", "clear-archive", "wipe"]:
             clear_history_cmd()
+        elif choice == "17" or choice.lower() in ["accuracy", "benchmark", "metrics", "stats", "score"]:
+            accuracy_cmd()
         else:
-            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 16 (or 0 to exit).[/bold red]\n")
+            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 17 (or 0 to exit).[/bold red]\n")
 
         should_repeat = Confirm.ask("\n[bold cyan]Return to main command menu?[/bold cyan]", default=True)
         if not should_repeat:
             console.print("[dim]Exiting interactive menu. Run 'python agent.py menu' or 'python agent.py /help' anytime to relaunch.[/dim]")
             break
+
+
+@app.command(name="accuracy")
+def accuracy_cmd() -> None:
+    """Display the official accuracy metrics, benchmark comparison, and test suite validation matrix."""
+    print_banner()
+    print_accuracy_benchmark_chart()
+
+
+@app.command(name="benchmark")
+def benchmark_alias_cmd() -> None:
+    """Shortcut alias for displaying accuracy metrics and benchmark performance."""
+    accuracy_cmd()
 
 
 @app.command(name="checkup")
