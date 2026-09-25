@@ -165,6 +165,8 @@ from core.web_threat_cleaner import (
     clean_web_threats,
     scan_all_web_threats,
 )
+from core.dashboard import start_dashboard_server
+from core.threat_scanner import scan_suspicious_url, scan_email_text
 from core.ui import (
     console,
     print_active_and_solved_issues,
@@ -190,6 +192,8 @@ from core.ui import (
     print_status_summary,
     print_web_threats_summary,
     print_accuracy_benchmark_chart,
+    print_threat_scan_url_report,
+    print_threat_scan_email_report,
 )
 
 app = typer.Typer(
@@ -1417,11 +1421,11 @@ def clear_history_cmd() -> None:
 
 @app.command(name="menu")
 def interactive_menu_cmd() -> None:
-    """Launch interactive numbered menu to run any agent command by number (1 to 16)."""
+    """Launch interactive numbered menu to run any agent command by number (1 to 19)."""
     while True:
         print_banner()
         print_interactive_menu()
-        choice = typer.prompt("Select command number [1-16] (or type 'exit')", default="1")
+        choice = typer.prompt("Select command number [1-19] (or type 'exit')", default="1")
         choice = choice.strip()
 
         if choice.lower() in ["exit", "q", "quit", "close", "0"]:
@@ -1480,13 +1484,111 @@ def interactive_menu_cmd() -> None:
             clear_history_cmd()
         elif choice == "16" or choice.lower() in ["accuracy", "benchmark", "metrics", "stats", "score"]:
             accuracy_cmd()
+        elif choice == "17" or choice.lower() in ["dashboard", "gui", "web", "web-dashboard"]:
+            dashboard_cmd()
+        elif choice == "18" or choice.lower() in ["scan-link", "link", "url", "check-link"]:
+            scan_link_cmd()
+        elif choice == "19" or choice.lower() in ["scan-email", "email", "spam", "phishing"]:
+            scan_email_cmd()
         else:
-            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 16 (or type 'exit' to quit).[/bold red]\n")
+            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 19 (or type 'exit' to quit).[/bold red]\n")
 
         should_repeat = Confirm.ask("\n[bold cyan]Return to main command menu?[/bold cyan]", default=True)
         if not should_repeat:
             console.print("[dim]Exiting interactive menu. Run 'python agent.py menu' or 'fix' anytime to relaunch.[/dim]")
             break
+
+
+@app.command(name="scan-link")
+def scan_link_cmd(
+    url: Optional[str] = typer.Argument(None, help="Suspicious URL or link to inspect for phishing, homoglyphs and malware."),
+) -> None:
+    """Analyze a suspicious URL or link for phishing, typosquatting, homoglyphs, and exploit payloads."""
+    print_banner()
+    if hasattr(url, "default"):
+        url = None
+    if not url:
+        url = typer.prompt("Enter suspicious link or URL to inspect", default="http://paypa1-security-verification.xyz/login.php?user=urgent")
+
+    with console.status("[bold cyan]Analyzing URL structure, TLD reputation & domain entropy...[/bold cyan]"):
+        import time
+        time.sleep(0.6)
+        report = scan_suspicious_url(url)
+
+    print_threat_scan_url_report(report)
+    record_command_history(
+        command=f"scan-link {url}",
+        category="🛡️ Threat Guard",
+        action_summary=f"Analyzed URL: {url} -> Verdict: {report.get('verdict')} ({report.get('risk_score')}%)",
+        status="COMPLETED",
+    )
+
+
+@app.command(name="scan-email")
+def scan_email_cmd(
+    email_text: Optional[str] = typer.Option(None, "--text", "-t", help="Raw email body text to inspect."),
+) -> None:
+    """Analyze email content for social engineering, urgency triggers, credential harvesting and malicious links."""
+    print_banner()
+    if hasattr(email_text, "default"):
+        email_text = None
+    if not email_text:
+        console.print("[bold yellow]Enter / paste email body or subject line below (Press Enter when done):[/bold yellow]")
+        email_text = typer.prompt("Email content", default="URGENT: Your PayPal account has been suspended! Immediate action required to verify your password and bank account. Click: http://paypa1-security-verification.xyz/login")
+
+    with console.status("[bold cyan]Evaluating social engineering heuristics, urgency triggers & embedded links...[/bold cyan]"):
+        import time
+        time.sleep(0.8)
+        report = scan_email_text(email_text)
+
+    print_threat_scan_email_report(report)
+    record_command_history(
+        command="scan-email",
+        category="📧 Email Security",
+        action_summary=f"Scanned Email -> Verdict: {report.get('verdict')} ({report.get('risk_score')}%)",
+        status="COMPLETED",
+    )
+
+
+@app.command(name="dashboard")
+def dashboard_cmd(
+    port: int = typer.Option(5000, help="Port to run the Cyber Dashboard server on."),
+) -> None:
+    """Launch real-time Cyber Dashboard web GUI at localhost:5000 — interactive diagnostics, live telemetry, and node graph."""
+    import threading
+    import webbrowser
+
+    if not isinstance(port, int) or hasattr(port, "default"):
+        port = 5000
+    else:
+        try:
+            port = int(port)
+        except Exception:
+            port = 5000
+
+    print_banner()
+    console.print(
+        Panel(
+            "[bold white]🌐 Launching Real-Time Cyber Dashboard...[/bold white]\n\n"
+            f"[cyan]Open your browser at:[/cyan] [bold green underline]http://localhost:{port}[/bold green underline]\n\n"
+            "[dim]Press Ctrl+C to stop the dashboard server.[/dim]",
+            title="[bold cyan]⚡ Autonomous OS Debugging Agent — Cyber Dashboard ⚡[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+
+    # Auto-open browser after a short delay
+    def open_browser():
+        import time
+        time.sleep(1.5)
+        webbrowser.open(f"http://localhost:{port}")
+
+    threading.Thread(target=open_browser, daemon=True).start()
+
+    try:
+        start_dashboard_server(port=port)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Dashboard server stopped. Goodbye![/yellow]")
 
 
 @app.command(name="exit")
@@ -1529,14 +1631,26 @@ def help_menu_cmd() -> None:
 
 @app.command(name="help")
 def help_cmd() -> None:
-    """Show interactive numbered command menu (1 to 16)."""
+    """Show interactive numbered command menu (1 to 19)."""
     interactive_menu_cmd()
 
 
 @app.command(name="/help")
 def slash_help_cmd() -> None:
-    """Show interactive numbered command menu (1 to 16) via /help."""
+    """Show interactive numbered command menu (1 to 19) via /help."""
     interactive_menu_cmd()
+
+
+@app.command(name="link")
+def link_alias_cmd() -> None:
+    """Shortcut alias for scanning suspicious links and URLs."""
+    scan_link_cmd()
+
+
+@app.command(name="email")
+def email_alias_cmd() -> None:
+    """Shortcut alias for scanning suspicious spam/phishing emails."""
+    scan_email_cmd()
 
 
 @app.command(name="reset-archive")

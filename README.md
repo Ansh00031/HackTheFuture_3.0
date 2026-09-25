@@ -158,7 +158,7 @@ cp .env.example .env
 
 ## 💻 CLI Usage Guide
 
-### 🌟 1. Interactive Command Selector Menu (Options 1 to 16)
+### 🌟 1. Interactive Command Selector Menu (Options 1 to 19)
 Launch the interactive master menu:
 ```bash
 python agent.py menu
@@ -186,6 +186,9 @@ fix
  [14] install-shortcut      ⚡ 1-Word 'fix' Cmd     Install permanent 1-word 'fix' and 'exit' shortcuts
  [15] clear-history         🗑️ Reset & Cleanup      Permanently delete resolved archive and test logs
  [16] accuracy              📊 Accuracy Matrix      View real-world benchmark accuracy matrix
+ [17] dashboard             🌐 Live Web Dashboard   Launch real-time Cyber Dashboard GUI at localhost:5000
+ [18] scan-link             🛡️ Phishing Link Guard  Inspect URL for domain spoofing, homoglyphs & exploits
+ [19] scan-email            📧 Spam/Phishing Email  Evaluate email for urgency, social engineering & theft
 ========================================================================================================
 ```
 

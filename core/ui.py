@@ -846,6 +846,60 @@ def print_accuracy_benchmark_chart() -> None:
         " • [cyan]Clean System Scan[/cyan] (Nominal PC State): [bold green]99.5% Specificity[/bold green] (Accurately reports 100% Error-Free)"
     )
     console.print(Panel(summary_box, title="[bold green]🔬 Technical Test Suite & Validation Evidence[/bold green]", border_style="green"))
+def print_threat_scan_url_report(report: dict) -> None:
+    """Render beautiful Rich card for malicious URL / Link threat analysis."""
+    verdict = report.get("verdict", "UNKNOWN")
+    score = report.get("risk_score", 0)
+    threat = report.get("threat_level", "MEDIUM")
+
+    if verdict == "MALICIOUS":
+        color = "red"
+        badge = "🚨 MALICIOUS PHISHING / EXPLOIT LINK"
+    elif verdict == "SUSPICIOUS":
+        color = "yellow"
+        badge = "⚠️ SUSPICIOUS LINK"
+    else:
+        color = "green"
+        badge = "✅ CLEAN / SAFE LINK"
+
+    flags_text = "\n".join([f" • [white]{f}[/white]" for f in report.get("flags", [])])
+    body = (
+        f"[bold cyan]Target URL:[/bold cyan] {report.get('url')}\n"
+        f"[bold cyan]Domain:[/bold cyan] {report.get('parsed_domain', 'N/A')}  |  [bold cyan]Entropy:[/bold cyan] {report.get('entropy', 'N/A')}\n"
+        f"[bold {color}]Verdict:[/bold {color}] [bold {color}]{badge}[/bold {color}]\n"
+        f"[bold {color}]Risk Score:[/bold {color}] [bold {color}]{score}%[/bold {color}]  |  [bold {color}]Threat Level:[/bold {color}] [bold {color}]{threat}[/bold {color}]\n\n"
+        f"[bold yellow]Threat Trigger Analysis:[/bold yellow]\n{flags_text}\n\n"
+        f"[bold white]Action Recommendation:[/bold white]\n[dim]{report.get('recommendation', '')}[/dim]"
+    )
+    console.print(Panel(body, title=f"[bold {color}]🛡️ Link Threat Intelligence Report[/bold {color}]", border_style=color))
+    console.print()
+
+
+def print_threat_scan_email_report(report: dict) -> None:
+    """Render beautiful Rich card for Spam / Phishing email analysis."""
+    verdict = report.get("verdict", "UNKNOWN")
+    score = report.get("risk_score", 0)
+    threat = report.get("threat_level", "MEDIUM")
+
+    if "MALICIOUS" in verdict:
+        color = "red"
+        badge = "🚨 HIGH-RISK PHISHING EMAIL"
+    elif "SUSPICIOUS" in verdict:
+        color = "yellow"
+        badge = "⚠️ SUSPICIOUS SPAM EMAIL"
+    else:
+        color = "green"
+        badge = "✅ LEGITIMATE / SAFE EMAIL"
+
+    flags_text = "\n".join([f" • [white]{f}[/white]" for f in report.get("flags", [])])
+    body = (
+        f"[bold {color}]Verdict:[/bold {color}] [bold {color}]{badge}[/bold {color}]\n"
+        f"[bold {color}]Risk Score:[/bold {color}] [bold {color}]{score}%[/bold {color}]  |  [bold {color}]Threat Level:[/bold {color}] [bold {color}]{threat}[/bold {color}]\n"
+        f"[bold cyan]Embedded Links Audited:[/bold cyan] {report.get('extracted_urls_count', 0)}\n\n"
+        f"[bold yellow]Cognitive Threat Triggers:[/bold yellow]\n{flags_text}\n\n"
+        f"[bold white]Action Recommendation:[/bold white]\n[dim]{report.get('recommendation', '')}[/dim]"
+    )
+    console.print(Panel(body, title=f"[bold {color}]📧 Email Phishing & Spam Security Report[/bold {color}]", border_style=color))
     console.print()
 
 
@@ -879,6 +933,9 @@ def print_interactive_menu() -> None:
         ("14", "install-shortcut", "⚡ 1-Word 'fix' Cmd", "Install permanent 1-word 'fix' and 'exit' shortcuts in cmd"),
         ("15", "clear-history", "🗑️ Reset & Cleanup", "Permanently delete resolved archive, history logs, and test snapshots"),
         ("16", "accuracy", "📊 Accuracy Matrix", "View real-world benchmark accuracy scores & test suite validation"),
+        ("17", "dashboard", "🌐 Live Web Dashboard", "Launch real-time Cyber Dashboard GUI at localhost:5000"),
+        ("18", "scan-link", "🛡️ Phishing Link Guard", "Analyze suspicious URL/link for domain spoofing, homoglyphs & exploits"),
+        ("19", "scan-email", "📧 Spam & Phishing Email", "Evaluate email text for social engineering, urgency & credential theft"),
     ]
 
     for num, cmd, cat, desc in options:
