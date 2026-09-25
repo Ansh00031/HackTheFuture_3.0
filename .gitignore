@@ -29,15 +29,18 @@ venv/
 .venv/
 env/
 ENV/
+python_env/
 
-# Environment Variables & Secrets
+# Environment Variables & Secrets (Keep Private!)
 .env
 .env.local
+.env.*.local
 
-# Session backups / snapshots
+# Session backups, snapshots & local logs
 .backups/
 context.json
 *.bak
+*.log
 
 # IDEs and Editors
 .vscode/
@@ -49,5 +52,15 @@ context.json
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-$RECYCLE.BIN/
-.DS_Store
+
+# Legacy hackathon slide drafts
+Build_With_Bharat_Round1_8Slides.pptx
+OS_Debugger.pdf
+generate_pdf.py
+generate_qa_pdf.py
+generate_reference_pdf.py
+generate_round1_8slides_ppt.py
+generate_ppt.py
+search_and_build_ppt.py
+update_ppt.py
+test_render.py

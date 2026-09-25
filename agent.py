@@ -8,6 +8,7 @@ Usage:
     python agent.py resume session_20260817_...
 """
 
+import ctypes
 import json
 import os
 import platform
@@ -15,6 +16,19 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
+
+# Enable ANSI / Virtual Terminal Processing in Windows cmd.exe & PowerShell
+if sys.platform == "win32":
+    try:
+        os.system("")  # Activates Windows ANSI Virtual Terminal Processing
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE (-11)
+        mode = ctypes.c_ulong()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            mode.value |= 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            kernel32.SetConsoleMode(handle, mode)
+    except Exception:
+        pass
 
 # Ensure Windows terminal doesn't crash on utf-8 / cp1252 emoji output
 if hasattr(sys.stdout, "reconfigure"):
@@ -894,55 +908,130 @@ def rollback(
     )
 
 
+@app.command(name="autostart")
+def autostart_cmd() -> None:
+    """Manage automatic startup health monitor: enable, disable, or toggle."""
+    print_banner()
+    is_on, details = is_autostart_enabled()
+    status_str = "[bold green]ENABLED (Active on Boot)[/bold green]" if is_on else "[bold yellow]DISABLED (Inactive)[/bold yellow]"
+
+    console.print(f"[bold cyan]Current Startup Auto-Run Status:[/bold cyan] {status_str}\n[dim]Configuration: {details}[/dim]\n")
+    console.print("[bold white]Choose an action:[/bold white]")
+    console.print("  [bold cyan]1.[/bold cyan] Enable Auto-Start on Boot")
+    console.print("  [bold cyan]2.[/bold cyan] Disable Auto-Start on Boot")
+    console.print("  [bold cyan]3.[/bold cyan] Toggle Status")
+    console.print("  [bold cyan]0.[/bold cyan] Return to Main Menu\n")
+
+    default_action = "2" if is_on else "1"
+    choice = typer.prompt(f"Select option [1-3, 0 to return]", default=default_action)
+    choice = choice.strip()
+
+    if choice in ["0", "back", "exit", "q", "quit"]:
+        console.print("[dim]Returning to main menu...[/dim]\n")
+        return
+    elif choice == "1" or choice.lower() == "enable":
+        if is_on:
+            console.print(
+                Panel(
+                    "[bold yellow]ℹ Auto-start is ALREADY ENABLED on this PC.[/bold yellow]\nNo changes needed.",
+                    title="[bold yellow]Already Enabled[/bold yellow]",
+                    border_style="yellow",
+                )
+            )
+            return
+        success, msg = enable_autostart_func()
+        record_command_history(
+            command="autostart enable",
+            category="🚀 Startup Setup",
+            action_summary="Configured automatic startup health monitor launcher",
+            status="SUCCESS" if success else "FAILED",
+        )
+        if success:
+            console.print(
+                Panel(
+                    f"[bold green]✓ Auto-Start Successfully Enabled![/bold green]\n\n{msg}\n\n"
+                    "[dim]The agent will automatically check system health whenever you start or restart Windows.[/dim]",
+                    title="[bold green]Auto-Start Active[/bold green]",
+                    border_style="green",
+                )
+            )
+        else:
+            console.print(
+                Panel(
+                    f"[bold red]Failed to Enable Auto-Start[/bold red]\n\n{msg}",
+                    title="[bold red]Configuration Error[/bold red]",
+                    border_style="red",
+                )
+            )
+    elif choice == "2" or choice.lower() == "disable":
+        if not is_on:
+            console.print(
+                Panel(
+                    "[bold yellow]ℹ Auto-start is ALREADY DISABLED on this PC.[/bold yellow]\nNo changes needed.",
+                    title="[bold yellow]Already Disabled[/bold yellow]",
+                    border_style="yellow",
+                )
+            )
+            return
+        success, msg = disable_autostart_func()
+        record_command_history(
+            command="autostart disable",
+            category="🚀 Startup Setup",
+            action_summary="Removed automatic boot monitor from Windows startup",
+            status="SUCCESS",
+        )
+        console.print(
+            Panel(
+                f"[bold yellow]✓ Auto-Start Successfully Disabled.[/bold yellow]\n\n{msg}",
+                title="[bold yellow]Auto-Start Disabled[/bold yellow]",
+                border_style="yellow",
+            )
+        )
+    elif choice == "3" or choice.lower() == "toggle":
+        if is_on:
+            success, msg = disable_autostart_func()
+            record_command_history(
+                command="autostart toggle (disable)",
+                category="🚀 Startup Setup",
+                action_summary="Toggled automatic boot monitor to disabled",
+                status="SUCCESS",
+            )
+            console.print(
+                Panel(
+                    f"[bold yellow]✓ Auto-Start Toggled to DISABLED.[/bold yellow]\n\n{msg}",
+                    title="[bold yellow]Auto-Start Disabled[/bold yellow]",
+                    border_style="yellow",
+                )
+            )
+        else:
+            success, msg = enable_autostart_func()
+            record_command_history(
+                command="autostart toggle (enable)",
+                category="🚀 Startup Setup",
+                action_summary="Toggled automatic boot monitor to enabled",
+                status="SUCCESS" if success else "FAILED",
+            )
+            console.print(
+                Panel(
+                    f"[bold green]✓ Auto-Start Toggled to ENABLED![/bold green]\n\n{msg}",
+                    title="[bold green]Auto-Start Active[/bold green]",
+                    border_style="green",
+                )
+            )
+    else:
+        console.print("[dim]Invalid option selected. Returning to main menu.[/dim]")
+
+
 @app.command(name="enable-autostart")
 def enable_autostart_cmd() -> None:
-    """Register the agent to automatically launch and monitor system health on PC startup."""
-    print_banner()
-    success, msg = enable_autostart_func()
-    record_command_history(
-        command="enable-autostart",
-        category="🚀 Startup Setup",
-        action_summary="Configured automatic startup health monitor launcher",
-        status="SUCCESS" if success else "FAILED",
-    )
-    if success:
-        console.print(
-            Panel(
-                f"[bold green]Auto-Start Successfully Configured[/bold green]\n\n"
-                f"{msg}\n\n"
-                "[dim]The agent will automatically check system health whenever you start or restart Windows.[/dim]",
-                title="[bold green]Auto-Start Active[/bold green]",
-                border_style="green",
-            )
-        )
-    else:
-        console.print(
-            Panel(
-                f"[bold red]Failed to Enable Auto-Start[/bold red]\n\n{msg}",
-                title="[bold red]Configuration Error[/bold red]",
-                border_style="red",
-            )
-        )
+    """Alias for enabling automatic startup health check."""
+    autostart_cmd()
 
 
 @app.command(name="disable-autostart")
 def disable_autostart_cmd() -> None:
-    """Remove automatic startup launchers and registry entries."""
-    print_banner()
-    success, msg = disable_autostart_func()
-    record_command_history(
-        command="disable-autostart",
-        category="🚀 Startup Setup",
-        action_summary="Removed automatic boot monitor from Windows startup",
-        status="SUCCESS",
-    )
-    console.print(
-        Panel(
-            f"[yellow]{msg}[/yellow]",
-            title="[bold yellow]Auto-Start Disabled[/bold yellow]",
-            border_style="yellow",
-        )
-    )
+    """Alias for disabling automatic startup health check."""
+    autostart_cmd()
 
 
 @app.command(name="startup-log")
@@ -1332,12 +1421,12 @@ def interactive_menu_cmd() -> None:
     while True:
         print_banner()
         print_interactive_menu()
-        choice = typer.prompt("Select command number [0-16]", default="1")
+        choice = typer.prompt("Select command number [1-16] (or type 'exit')", default="1")
         choice = choice.strip()
 
-        if choice in ["0", "exit", "q", "quit"]:
-            console.print("[yellow]Exiting interactive command menu. Goodbye![/yellow]")
-            break
+        if choice.lower() in ["exit", "q", "quit", "close", "0"]:
+            console.print("[yellow]Exiting Autonomous OS Debugging Agent. Goodbye![/yellow]")
+            return
         elif choice == "1" or choice.lower() in ["full-checkup", "checkup"]:
             anchor = Confirm.ask("Anchor cryptographic proof to Algorand blockchain if an error is healed?", default=False)
             try:
@@ -1381,25 +1470,36 @@ def interactive_menu_cmd() -> None:
                 pass
         elif choice == "11" or choice.lower() == "check-env":
             check_env()
-        elif choice == "12" or choice.lower() == "enable-autostart":
-            enable_autostart_cmd()
-        elif choice == "13" or choice.lower() == "disable-autostart":
-            disable_autostart_cmd()
-        elif choice == "14" or choice.lower() == "startup-log":
+        elif choice == "12" or choice.lower() in ["autostart", "toggle-autostart", "manage-autostart"]:
+            autostart_cmd()
+        elif choice == "13" or choice.lower() == "startup-log":
             startup_log_cmd()
-        elif choice == "15" or choice.lower() in ["install-shortcut", "setup-fix", "shortcut", "fix"]:
+        elif choice == "14" or choice.lower() in ["install-shortcut", "setup-fix", "shortcut", "fix"]:
             install_shortcut_cmd()
-        elif choice == "16" or choice.lower() in ["clear-history", "reset-history", "clear-archive", "wipe"]:
+        elif choice == "15" or choice.lower() in ["clear-history", "reset-history", "clear-archive", "wipe"]:
             clear_history_cmd()
-        elif choice == "17" or choice.lower() in ["accuracy", "benchmark", "metrics", "stats", "score"]:
+        elif choice == "16" or choice.lower() in ["accuracy", "benchmark", "metrics", "stats", "score"]:
             accuracy_cmd()
         else:
-            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 17 (or 0 to exit).[/bold red]\n")
+            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 16 (or type 'exit' to quit).[/bold red]\n")
 
         should_repeat = Confirm.ask("\n[bold cyan]Return to main command menu?[/bold cyan]", default=True)
         if not should_repeat:
-            console.print("[dim]Exiting interactive menu. Run 'python agent.py menu' or 'python agent.py /help' anytime to relaunch.[/dim]")
+            console.print("[dim]Exiting interactive menu. Run 'python agent.py menu' or 'fix' anytime to relaunch.[/dim]")
             break
+
+
+@app.command(name="exit")
+def exit_cmd() -> None:
+    """Exit the Autonomous OS Debugging Agent CLI."""
+    console.print("[yellow]Exiting Autonomous OS Debugging Agent. Goodbye![/yellow]")
+    raise typer.Exit(code=0)
+
+
+@app.command(name="quit")
+def quit_alias_cmd() -> None:
+    """Exit the Autonomous OS Debugging Agent CLI."""
+    exit_cmd()
 
 
 @app.command(name="accuracy")

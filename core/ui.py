@@ -1,5 +1,7 @@
 """Rich UI utilities for styled CLI output, panels, tables, and visual executive summaries."""
 
+import ctypes
+import os
 import sys
 from typing import Any, Dict, List, Optional
 from rich.console import Console
@@ -7,6 +9,19 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.theme import Theme
 from rich.text import Text
+
+# Enable ANSI / Virtual Terminal Processing in Windows cmd.exe & PowerShell
+if sys.platform == "win32":
+    try:
+        os.system("")  # Activates Windows ANSI Virtual Terminal Processing
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE (-11)
+        mode = ctypes.c_ulong()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            mode.value |= 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+            kernel32.SetConsoleMode(handle, mode)
+    except Exception:
+        pass
 
 # Ensure Windows terminal doesn't crash on utf-8 / cp1252 emoji output
 if hasattr(sys.stdout, "reconfigure"):
@@ -30,7 +45,7 @@ custom_theme = Theme({
     "muted": "dim grey70",
 })
 
-console = Console(theme=custom_theme, legacy_windows=False)
+console = Console(theme=custom_theme)
 
 
 def print_banner() -> None:
@@ -859,13 +874,11 @@ def print_interactive_menu() -> None:
         ("9", "blockchain status", "🟣 Web3 / Algorand", "View Algorand TestNet wallet, balance, and AlgoKit Lora link"),
         ("10", "blockchain anchor", "🟣 Web3 / Algorand", "Commit cryptographic SHA-256 proof of repair to blockchain"),
         ("11", "check-env", "⚙️ System Config", "Verify environment, LLM configuration, and Administrator/root rights"),
-        ("12", "enable-autostart", "🚀 Startup Setup", "Register agent to automatically monitor system health on boot"),
-        ("13", "disable-autostart", "🚀 Startup Setup", "Remove automatic boot monitor from startup tasks"),
-        ("14", "startup-log", "📜 Boot History Log", "View timestamped log of all automatic startup health runs"),
-        ("15", "install-shortcut", "⚡ 1-Word 'fix' Cmd", "Install permanent 1-word 'fix' shortcut in Command Prompt (cmd)"),
-        ("16", "clear-history", "🗑️ Reset & Cleanup", "Permanently delete resolved archive, history logs, and test snapshots"),
-        ("17", "accuracy", "📊 Accuracy Matrix", "View real-world benchmark accuracy scores & test suite validation"),
-        ("0", "exit", "❌ Exit", "Exit interactive command menu"),
+        ("12", "autostart", "🚀 Startup Manager", "Enable / disable / toggle automatic startup boot monitor"),
+        ("13", "startup-log", "📜 Boot History Log", "View timestamped log of all automatic startup health runs"),
+        ("14", "install-shortcut", "⚡ 1-Word 'fix' Cmd", "Install permanent 1-word 'fix' and 'exit' shortcuts in cmd"),
+        ("15", "clear-history", "🗑️ Reset & Cleanup", "Permanently delete resolved archive, history logs, and test snapshots"),
+        ("16", "accuracy", "📊 Accuracy Matrix", "View real-world benchmark accuracy scores & test suite validation"),
     ]
 
     for num, cmd, cat, desc in options:
