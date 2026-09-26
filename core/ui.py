@@ -903,6 +903,36 @@ def print_threat_scan_email_report(report: dict) -> None:
     console.print()
 
 
+def print_file_scan_report(report: dict) -> None:
+    """Render Rich card for document, attachment, and image virus inspection."""
+    verdict = report.get("verdict", "UNKNOWN")
+    score = report.get("risk_score", 0)
+    threat = report.get("threat_level", "MEDIUM")
+
+    if "MALICIOUS" in verdict:
+        color = "red"
+        badge = "🚨 MALICIOUS / WEAPONIZED ATTACHMENT"
+    elif "SUSPICIOUS" in verdict:
+        color = "yellow"
+        badge = "⚠️ SUSPICIOUS ATTACHMENT"
+    else:
+        color = "green"
+        badge = "✅ CLEAN / BENIGN FILE"
+
+    flags_text = "\n".join([f" • [white]{f}[/white]" for f in report.get("flags", [])])
+    hashes = report.get("hashes", {})
+    body = (
+        f"[bold cyan]File Name:[/bold cyan] {report.get('file_name')}  |  [bold cyan]Size:[/bold cyan] {report.get('file_size_bytes', 0):,} bytes\n"
+        f"[bold cyan]Detected True Type:[/bold cyan] {report.get('detected_type')}  |  [bold cyan]SHA-256:[/bold cyan] {hashes.get('sha256', 'N/A')[:24]}...\n"
+        f"[bold {color}]Verdict:[/bold {color}] [bold {color}]{badge}[/bold {color}]\n"
+        f"[bold {color}]Risk Score:[/bold {color}] [bold {color}]{score}%[/bold {color}]  |  [bold {color}]Threat Level:[/bold {color}] [bold {color}]{threat}[/bold {color}]\n\n"
+        f"[bold yellow]Safety & Macro Analysis:[/bold yellow]\n{flags_text}\n\n"
+        f"[bold white]Action Recommendation:[/bold white]\n[dim]{report.get('recommendation', '')}[/dim]"
+    )
+    console.print(Panel(body, title=f"[bold {color}]📎 Attachment & Virus Intelligence Report[/bold {color}]", border_style=color))
+    console.print()
+
+
 def print_interactive_menu() -> None:
     """Print clear numbered interactive command selector menu."""
     menu_table = Table(
@@ -936,6 +966,8 @@ def print_interactive_menu() -> None:
         ("17", "dashboard", "🌐 Live Web Dashboard", "Launch real-time Cyber Dashboard GUI at localhost:5000"),
         ("18", "scan-link", "🛡️ Phishing Link Guard", "Analyze suspicious URL/link for domain spoofing, homoglyphs & exploits"),
         ("19", "scan-email", "📧 Spam & Phishing Email", "Evaluate email text for social engineering, urgency & credential theft"),
+        ("20", "sentry", "🪟 Floating Cyber Bubble", "Launch always-on-top draggable Assistive HUD & Real-Time Screen Guard"),
+        ("21", "scan-file", "📎 Attachment Virus Scan", "Audit document/image/attachment for macros, double-extensions & malware"),
     ]
 
     for num, cmd, cat, desc in options:

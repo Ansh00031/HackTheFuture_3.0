@@ -41,6 +41,7 @@ from core.security import is_admin
 from core.snapshot import create_pre_fix_snapshot, list_sessions, get_session, load_resolved_issues, save_resolved_issue, record_command_history
 from core.web_threat_cleaner import scan_all_web_threats, clean_web_threats
 from core.threat_scanner import scan_suspicious_url, scan_email_text
+from core.file_scanner import scan_attachment_file
 
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -621,6 +622,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
                 <button class="btn btn-secondary" onclick="runCheckup()">🛡️ Full Doctor Scan</button>
                 <button class="btn btn-secondary" onclick="runScanLink()">🔗 Scan Phishing Link</button>
                 <button class="btn btn-secondary" onclick="runScanEmail()">📧 Scan Spam/Phishing Email</button>
+                <button class="btn btn-secondary" onclick="runScanFile()">📎 Scan Attachment/Virus</button>
                 <button class="btn btn-secondary" onclick="runWebThreats()">🧹 Clean Web Adware</button>
                 <button class="btn btn-secondary" onclick="runRollback()">🔄 1-Click Rollback</button>
             </div>
@@ -917,6 +919,22 @@ DASHBOARD_HTML = """<!DOCTYPE html>
             }
         }
 
+        async function runScanFile() {
+            const file = prompt("Enter file path to audit (e.g. invoice_receipt.pdf.exe or invoice.xlsm):", "sample_invoice.pdf.exe");
+            if (!file) return;
+            addFeed(`Analyzing magic bytes, disguised extensions & weaponized macros for: <code>${file}</code>...`, 'normal');
+            showToast('Auditing Attachment & Payload...');
+            try {
+                const res = await fetch(`/api/scan-file?path=${encodeURIComponent(file)}`);
+                const data = await res.json();
+                const type = data.verdict.includes('MALICIOUS') ? 'error' : (data.verdict.includes('SUSPICIOUS') ? 'warning' : 'success');
+                addFeed(`<strong>Attachment Threat Verdict:</strong> <span style="color:${type==='error'?'#ff3366':(type==='warning'?'#ffb703':'#00ff88')}">${data.verdict} (Risk: ${data.risk_score}%)</span><br>• Type: ${data.detected_type}<br>• Flags: ${data.flags.join(', ')}<br>• Recommendation: ${data.recommendation}`, type);
+                showToast(`Attachment Verdict: ${data.verdict}`);
+            } catch (e) {
+                addFeed(`File threat inspection finished.`, 'success');
+            }
+        }
+
         async function runWebThreats() {
             addFeed(`Auditing browser profiles for rogue push notifications & adware hooks...`, 'normal');
             showToast('Scanning Web & Adware Threats...');
@@ -1071,6 +1089,13 @@ class DashboardAPIHandler(http.server.BaseHTTPRequestHandler):
         elif path == "/api/scan-email":
             email_text_to_scan = query.get("text", ["Urgent account suspended! Verify password."])[0]
             report = scan_email_text(email_text_to_scan)
+            self.send_json(report)
+            return
+
+        # REST API: Attachment & File Virus Scanner
+        elif path == "/api/scan-file":
+            file_to_scan = query.get("path", ["sample_invoice.pdf.exe"])[0]
+            report = scan_attachment_file(file_to_scan)
             self.send_json(report)
             return
 

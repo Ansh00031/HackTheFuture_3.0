@@ -167,6 +167,8 @@ from core.web_threat_cleaner import (
 )
 from core.dashboard import start_dashboard_server
 from core.threat_scanner import scan_suspicious_url, scan_email_text
+from core.file_scanner import scan_attachment_file
+from core.floating_hud import launch_floating_hud
 from core.ui import (
     console,
     print_active_and_solved_issues,
@@ -194,6 +196,7 @@ from core.ui import (
     print_accuracy_benchmark_chart,
     print_threat_scan_url_report,
     print_threat_scan_email_report,
+    print_file_scan_report,
 )
 
 app = typer.Typer(
@@ -1421,11 +1424,11 @@ def clear_history_cmd() -> None:
 
 @app.command(name="menu")
 def interactive_menu_cmd() -> None:
-    """Launch interactive numbered menu to run any agent command by number (1 to 19)."""
+    """Launch interactive numbered menu to run any agent command by number (1 to 21)."""
     while True:
         print_banner()
         print_interactive_menu()
-        choice = typer.prompt("Select command number [1-19] (or type 'exit')", default="1")
+        choice = typer.prompt("Select command number [1-21] (or type 'exit')", default="1")
         choice = choice.strip()
 
         if choice.lower() in ["exit", "q", "quit", "close", "0"]:
@@ -1490,13 +1493,60 @@ def interactive_menu_cmd() -> None:
             scan_link_cmd()
         elif choice == "19" or choice.lower() in ["scan-email", "email", "spam", "phishing"]:
             scan_email_cmd()
+        elif choice == "20" or choice.lower() in ["sentry", "bubble", "floating", "hud", "guard"]:
+            sentry_cmd()
+        elif choice == "21" or choice.lower() in ["scan-file", "file", "attachment", "virus"]:
+            scan_file_cmd()
         else:
-            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 19 (or type 'exit' to quit).[/bold red]\n")
+            console.print(f"[bold red]Invalid option '{choice}'. Please enter a number between 1 and 21 (or type 'exit' to quit).[/bold red]\n")
 
         should_repeat = Confirm.ask("\n[bold cyan]Return to main command menu?[/bold cyan]", default=True)
         if not should_repeat:
             console.print("[dim]Exiting interactive menu. Run 'python agent.py menu' or 'fix' anytime to relaunch.[/dim]")
             break
+
+
+@app.command(name="sentry")
+def sentry_cmd() -> None:
+    """Launch always-on-top draggable Floating Cyber Assistive Bubble & Autonomous Threat Radar."""
+    print_banner()
+    console.print(
+        Panel(
+            "[bold white]🪟 Launching Floating Cyber Sentry HUD...[/bold white]\n\n"
+            "• [bold green]Active State:[/bold green] Draggable assistive bubble placed on top right corner of desktop.\n"
+            "• [bold cyan]Zero-Touch Monitoring:[/bold cyan] Automatically audits active mail tabs, clipboard links, and downloads.\n"
+            "• [bold yellow]Interactive Click:[/bold yellow] Click the floating bubble anytime to inspect live alerts or scan files.\n\n"
+            "[dim]Close the floating bubble window to return to CLI.[/dim]",
+            title="[bold cyan]⚡ Autonomous Cyber Sentry HUD Active ⚡[/bold cyan]",
+            border_style="cyan",
+        )
+    )
+    launch_floating_hud()
+
+
+@app.command(name="scan-file")
+def scan_file_cmd(
+    file_path: Optional[str] = typer.Argument(None, help="Path to document, image, or attachment to inspect."),
+) -> None:
+    """Audit documents, attachments, and images for disguised executables, macros, and virus payloads."""
+    print_banner()
+    if hasattr(file_path, "default"):
+        file_path = None
+    if not file_path:
+        file_path = typer.prompt("Enter path to file or attachment to inspect", default="sample_invoice.pdf.exe")
+
+    with console.status("[bold cyan]Analyzing magic bytes, macro indicators & disguised extensions...[/bold cyan]"):
+        import time
+        time.sleep(0.5)
+        report = scan_attachment_file(file_path)
+
+    print_file_scan_report(report)
+    record_command_history(
+        command=f"scan-file {file_path}",
+        category="📎 Attachment Security",
+        action_summary=f"Inspected File: {report.get('file_name')} -> Verdict: {report.get('verdict')} ({report.get('risk_score')}%)",
+        status="COMPLETED",
+    )
 
 
 @app.command(name="scan-link")
@@ -1631,13 +1681,13 @@ def help_menu_cmd() -> None:
 
 @app.command(name="help")
 def help_cmd() -> None:
-    """Show interactive numbered command menu (1 to 19)."""
+    """Show interactive numbered command menu (1 to 21)."""
     interactive_menu_cmd()
 
 
 @app.command(name="/help")
 def slash_help_cmd() -> None:
-    """Show interactive numbered command menu (1 to 19) via /help."""
+    """Show interactive numbered command menu (1 to 21) via /help."""
     interactive_menu_cmd()
 
 
